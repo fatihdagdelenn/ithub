@@ -6,6 +6,7 @@ import Link from "next/link";
 import { LogOut, LayoutGrid, Tag as TagIcon, Users, ServerCog, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useClickOutside } from "@/lib/useClickOutside";
+import { APP_VERSION } from "@/lib/version";
 import type { SessionUser } from "@/lib/session";
 
 export function Navbar({ user }: { user: SessionUser }) {
@@ -29,6 +30,9 @@ export function Navbar({ user }: { user: SessionUser }) {
             <ServerCog size={15} />
           </span>
           <span className="hidden sm:inline">IT System Hub</span>
+          <span className="rounded-md bg-slate-900/[0.04] px-1.5 py-0.5 text-[11px] font-medium text-slate-500 dark:bg-white/[0.06] dark:text-slate-400">
+            v{APP_VERSION}
+          </span>
         </Link>
 
         <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -41,7 +45,10 @@ export function Navbar({ user }: { user: SessionUser }) {
             {menuOpen && (
               <div className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-lg border border-slate-200 bg-white py-1 shadow-lg dark:border-white/10 dark:bg-slate-900">
                 <div className="border-b border-slate-100 px-3 py-2 text-xs text-slate-500 dark:border-white/10 dark:text-slate-400">
-                  {user.username} · {user.role === "ADMIN" ? "Admin" : "Kullanıcı"}
+                  <div>
+                    {user.username} · {user.role === "ADMIN" ? "Admin" : "Kullanıcı"}
+                  </div>
+                  <div className="mt-0.5 text-slate-400 dark:text-slate-500">IT System Hub v{APP_VERSION}</div>
                 </div>
                 {user.role === "ADMIN" && (
                   <>

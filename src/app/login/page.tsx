@@ -3,6 +3,7 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { ServerCog } from "lucide-react";
+import { APP_VERSION } from "@/lib/version";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,6 +45,9 @@ export default function LoginPage() {
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Yönetim panellerine tek noktadan erişim
           </p>
+          <span className="rounded-md bg-slate-900/[0.04] px-1.5 py-0.5 text-[11px] font-medium text-slate-400 dark:bg-white/[0.06] dark:text-slate-500">
+            v{APP_VERSION}
+          </span>
         </div>
 
         <form onSubmit={handleSubmit} className="card space-y-4 p-6">
