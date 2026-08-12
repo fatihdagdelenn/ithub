@@ -1,0 +1,10 @@
+node_modules
+.next
+data
+*.db
+*.db-journal
+.env
+npm-debug.log*
+docker/host-ca-bundle.crt
+.claude/
+CLAUDE.md

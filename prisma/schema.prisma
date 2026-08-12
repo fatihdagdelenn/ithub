@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  username     String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("USER")
+  createdAt    DateTime @default(now())
+
+  @@map("users")
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  icon      String   @default("folder")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  systems System[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id   String @id @default(cuid())
+  name String @unique
+
+  systems SystemTag[]
+
+  @@map("tags")
+}
+
+model System {
+  id          String   @id @default(cuid())
+  name        String
+  type        String
+  host        String?
+  url         String
+  description String?
+  isFavorite  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  tags SystemTag[]
+
+  @@map("systems")
+}
+
+model SystemTag {
+  systemId String
+  tagId    String
+
+  system System @relation(fields: [systemId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([systemId, tagId])
+  @@map("system_tags")
+}
