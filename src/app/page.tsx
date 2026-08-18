@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   const [systems, categories, tags] = await Promise.all([
     prisma.system.findMany({
       include: { category: true, tags: { include: { tag: true } } },
-      orderBy: { name: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
     prisma.category.findMany({
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
@@ -29,6 +29,8 @@ export default async function DashboardPage() {
     url: s.url,
     description: s.description,
     isFavorite: s.isFavorite,
+    isOnline: s.isOnline,
+    lastCheckedAt: s.lastCheckedAt?.toISOString() ?? null,
     category: { id: s.category.id, name: s.category.name, icon: s.category.icon },
     tags: s.tags.map((t) => t.tag.name),
   }));

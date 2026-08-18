@@ -10,7 +10,7 @@ export async function GET() {
       category: true,
       tags: { include: { tag: true } },
     },
-    orderBy: { name: "asc" },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   });
 
   const shaped = systems.map((s) => ({
@@ -21,6 +21,8 @@ export async function GET() {
     url: s.url,
     description: s.description,
     isFavorite: s.isFavorite,
+    isOnline: s.isOnline,
+    lastCheckedAt: s.lastCheckedAt,
     createdAt: s.createdAt,
     category: { id: s.category.id, name: s.category.name, icon: s.category.icon },
     tags: s.tags.map((t) => t.tag.name),

@@ -12,12 +12,17 @@ export async function POST(request: NextRequest) {
 
   const { tags, host, description, ...data } = parsed.data;
   const tagIds = await resolveTagIds(tags);
+  const maxOrder = await prisma.system.aggregate({
+    where: { categoryId: data.categoryId },
+    _max: { sortOrder: true },
+  });
 
   const system = await prisma.system.create({
     data: {
       ...data,
       host: host || null,
       description: description || null,
+      sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
       tags: { create: tagIds.map((tagId) => ({ tagId })) },
     },
   });

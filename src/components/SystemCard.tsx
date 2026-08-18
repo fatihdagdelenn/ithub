@@ -16,6 +16,7 @@ export function SystemCard({
   selectMode,
   selected,
   onSelectToggle,
+  dragHandle,
 }: {
   system: SystemDTO;
   isAdmin: boolean;
@@ -26,6 +27,7 @@ export function SystemCard({
   selectMode?: boolean;
   selected?: boolean;
   onSelectToggle?: (id: string) => void;
+  dragHandle?: React.ReactNode;
 }) {
   const Icon = getSystemIcon(system.type, system.category.icon);
 
@@ -47,8 +49,24 @@ export function SystemCard({
               className="h-4 w-4 shrink-0 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
             />
           )}
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900/[0.04] text-slate-500 dark:bg-white/[0.06] dark:text-slate-300">
+          <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-900/[0.04] text-slate-500 dark:bg-white/[0.06] dark:text-slate-300">
             <Icon size={17} strokeWidth={1.75} />
+            <span
+              className={`absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full ring-2 ring-white dark:ring-slate-900 ${
+                system.isOnline === true
+                  ? "bg-emerald-500"
+                  : system.isOnline === false
+                    ? "bg-red-500"
+                    : "bg-slate-300 dark:bg-slate-600"
+              }`}
+              title={
+                system.isOnline === true
+                  ? "Çevrimiçi"
+                  : system.isOnline === false
+                    ? "Çevrimdışı"
+                    : "Henüz kontrol edilmedi"
+              }
+            />
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-[15px] font-semibold leading-tight text-slate-900 dark:text-slate-100">{system.name}</h3>
@@ -58,6 +76,7 @@ export function SystemCard({
 
         {!selectMode && (
           <div className="flex shrink-0 items-center gap-0.5">
+            {dragHandle}
             <button
               type="button"
               onClick={(e) => {

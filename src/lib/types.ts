@@ -17,6 +17,8 @@ export type SystemDTO = {
   url: string;
   description: string | null;
   isFavorite: boolean;
+  isOnline: boolean | null;
+  lastCheckedAt: string | null;
   category: { id: string; name: string; icon: string };
   tags: string[];
 };

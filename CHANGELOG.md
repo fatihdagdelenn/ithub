@@ -3,6 +3,15 @@
 Bu proje [Semantic Versioning](https://semver.org/) kullanır. Format
 [Keep a Changelog](https://keepachangelog.com/) temel alınarak hazırlanmıştır.
 
+## [1.1.0] - 2026-08-18
+
+### Eklenenler
+
+- Sistem kartlarında çevrimiçi/çevrimdışı göstergesi: arka planda periyodik olarak (varsayılan
+  10 dakikada bir, `HEALTH_CHECK_INTERVAL_MINUTES` ile ayarlanabilir) her sistemin URL'sine hafif
+  bir HTTP isteği atılır, sonucuna göre kart ikonunun köşesinde yeşil/kırmızı/gri nokta gösterilir
+- Kartları kategori içinde sürükle-bırak ile yeniden sıralama (Admin), tutamaç ikonu ile
+
 ## [1.0.0] - 2026-08-13
 
 İlk sürüm.
@@ -20,4 +29,5 @@ Bu proje [Semantic Versioning](https://semver.org/) kullanır. Format
   çalışabilecek şekilde tasarlandı
 - Dashboard'da uygulama sürümü görünür (Navbar ve giriş ekranı)
 
+[1.1.0]: https://github.com/fatihdagdelenn/ithub/releases/tag/v1.1.0
 [1.0.0]: https://github.com/fatihdagdelenn/ithub/releases/tag/v1.0.0

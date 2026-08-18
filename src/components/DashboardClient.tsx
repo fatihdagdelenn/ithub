@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { Star, SearchX, Search, Plus, Download, Upload, ListChecks, X } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { SystemCard } from "@/components/SystemCard";
+import { SortableSystemGrid } from "@/components/SortableSystemGrid";
 import { SystemFormModal, type SystemFormValues } from "@/components/SystemFormModal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { getIcon } from "@/lib/icons";
@@ -72,6 +73,24 @@ export function DashboardClient({
   async function toggleFavorite(id: string) {
     setSystems((prev) => prev.map((s) => (s.id === id ? { ...s, isFavorite: !s.isFavorite } : s)));
     await fetch(`/api/systems/${id}/favorite`, { method: "PATCH" });
+  }
+
+  async function handleReorder(categoryId: string, orderedIds: string[]) {
+    setSystems((prev) => {
+      // A comparator-based .sort() can't correctly order just a subset of a mixed-category array
+      // (ties for unrelated pairs break transitivity) - rebuild explicitly instead: walk `prev` in
+      // its existing order and drop the reordered category items back into the slots they occupy,
+      // leaving every other system untouched.
+      const byId = new Map(prev.map((s) => [s.id, s]));
+      const reordered = orderedIds.map((id) => byId.get(id)).filter((s): s is SystemDTO => !!s);
+      let cursor = 0;
+      return prev.map((s) => (s.category.id === categoryId ? reordered[cursor++] : s));
+    });
+    await fetch("/api/admin/systems/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ systemIds: orderedIds }),
+    });
   }
 
   async function handleAdd(values: SystemFormValues) {
@@ -203,6 +222,7 @@ export function DashboardClient({
     .map((cat) => ({ category: cat, items: filtered.filter((s) => s.category.id === cat.id) }))
     .filter((g) => g.items.length > 0);
   const singleCategoryItems = filtered.filter((s) => s.category.id === categoryFilter);
+  const sortable = isAdmin && !selectMode && query.trim() === "" && selectedTags.length === 0;
 
   function toggleTag(tag: string) {
     setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
@@ -382,22 +402,36 @@ export function DashboardClient({
                     <Icon size={12} /> {category.name}
                     <span className="normal-case text-slate-300 dark:text-slate-600">· {items.length}</span>
                   </h2>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                    {items.map((s) => (
-                      <SystemCard
-                        key={s.id}
-                        system={s}
-                        isAdmin={isAdmin}
-                        onToggleFavorite={toggleFavorite}
-                        onEdit={setEditingSystem}
-                        onDelete={setDeletingSystem}
-                        onClone={setCloningSystem}
-                        selectMode={selectMode}
-                        selected={selectedIds.has(s.id)}
-                        onSelectToggle={toggleSelect}
-                      />
-                    ))}
-                  </div>
+                  {sortable ? (
+                    <SortableSystemGrid
+                      items={items}
+                      onReorder={(ids) => handleReorder(category.id, ids)}
+                      cardProps={{
+                        isAdmin,
+                        onToggleFavorite: toggleFavorite,
+                        onEdit: setEditingSystem,
+                        onDelete: setDeletingSystem,
+                        onClone: setCloningSystem,
+                      }}
+                    />
+                  ) : (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                      {items.map((s) => (
+                        <SystemCard
+                          key={s.id}
+                          system={s}
+                          isAdmin={isAdmin}
+                          onToggleFavorite={toggleFavorite}
+                          onEdit={setEditingSystem}
+                          onDelete={setDeletingSystem}
+                          onClone={setCloningSystem}
+                          selectMode={selectMode}
+                          selected={selectedIds.has(s.id)}
+                          onSelectToggle={toggleSelect}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })
@@ -407,6 +441,18 @@ export function DashboardClient({
             <SearchX size={28} />
             <p className="text-sm">Sonuç bulunamadı</p>
           </div>
+        ) : sortable ? (
+          <SortableSystemGrid
+            items={singleCategoryItems}
+            onReorder={(ids) => handleReorder(categoryFilter, ids)}
+            cardProps={{
+              isAdmin,
+              onToggleFavorite: toggleFavorite,
+              onEdit: setEditingSystem,
+              onDelete: setDeletingSystem,
+              onClone: setCloningSystem,
+            }}
+          />
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {singleCategoryItems.map((s) => (

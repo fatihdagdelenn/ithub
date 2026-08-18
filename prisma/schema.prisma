@@ -47,9 +47,12 @@ model System {
   host        String?
   url         String
   description String?
-  isFavorite  Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  isFavorite    Boolean   @default(false)
+  isOnline      Boolean?
+  lastCheckedAt DateTime?
+  sortOrder     Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)

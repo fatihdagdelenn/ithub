@@ -4,6 +4,18 @@ import { importSchema } from "@/lib/validation";
 import { resolveTagIds } from "@/lib/tags";
 import { slugify } from "@/lib/slug";
 
+async function nextSortOrder(categoryId: string, cache: Map<string, number>): Promise<number> {
+  const cached = cache.get(categoryId);
+  if (cached !== undefined) {
+    cache.set(categoryId, cached + 1);
+    return cached;
+  }
+  const maxOrder = await prisma.system.aggregate({ where: { categoryId }, _max: { sortOrder: true } });
+  const next = (maxOrder._max.sortOrder ?? -1) + 1;
+  cache.set(categoryId, next + 1);
+  return next;
+}
+
 async function resolveCategoryId(name: string, cache: Map<string, string>): Promise<string> {
   const key = name.trim().toLowerCase();
   const cached = cache.get(key);
@@ -30,6 +42,7 @@ async function resolveCategoryId(name: string, cache: Map<string, string>): Prom
 
 export async function POST(request: NextRequest) {
   const categoryCache = new Map<string, string>();
+  const sortOrderCache = new Map<string, number>();
 
   const body = await request.json().catch(() => null);
   const parsed = importSchema.safeParse(body);
@@ -65,8 +78,9 @@ export async function POST(request: NextRequest) {
         });
         updated++;
       } else {
+        const sortOrder = await nextSortOrder(categoryId, sortOrderCache);
         await prisma.system.create({
-          data: { ...data, tags: { create: tagIds.map((tagId) => ({ tagId })) } },
+          data: { ...data, sortOrder, tags: { create: tagIds.map((tagId) => ({ tagId })) } },
         });
         created++;
       }

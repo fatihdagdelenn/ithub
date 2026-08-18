@@ -38,8 +38,12 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
-# No outbound calls of any kind at runtime — this app is meant to run in fully offline/intranet
-# environments. Verified: migrate + seed + next start all complete fine with zero network access.
+# No outbound calls to the internet at runtime — this app is meant to run in fully offline/
+# intranet environments. Verified: migrate + seed + next start all complete fine with zero
+# internet access. The one outbound traffic this app generates is the periodic health-check HTTP
+# request to each system's own configured URL (see HEALTH_CHECK_INTERVAL_MINUTES) - those targets
+# are intranet hosts the admin configured, not the internet, and failures there just mark the
+# system offline rather than affecting the app itself.
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN addgroup --system --gid 1001 nodejs \
