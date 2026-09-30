@@ -16,6 +16,7 @@ model User {
   createdAt    DateTime @default(now())
 
   favorites UserFavorite[]
+  groups    UserGroup[]
 
   @@map("users")
 }
@@ -29,6 +30,7 @@ model Category {
   createdAt DateTime @default(now())
 
   systems System[]
+  groups  GroupCategory[]
 
   @@map("categories")
 }
@@ -86,4 +88,43 @@ model UserFavorite {
 
   @@id([userId, systemId])
   @@map("user_favorites")
+}
+
+// Access groups. A (non-admin) user sees the union of the categories of every group they belong
+// to; admins always see everything. There are no "deny" rules: not being in a group that grants a
+// category is how a category is hidden.
+model Group {
+  id            String   @id @default(cuid())
+  name          String   @unique
+  description   String?
+  // When true the group grants every category, including ones created later.
+  allCategories Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  members    UserGroup[]
+  categories GroupCategory[]
+
+  @@map("groups")
+}
+
+model UserGroup {
+  userId  String
+  groupId String
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([userId, groupId])
+  @@map("user_groups")
+}
+
+model GroupCategory {
+  groupId    String
+  categoryId String
+
+  group    Group    @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, categoryId])
+  @@map("group_categories")
 }

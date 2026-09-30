@@ -1,14 +1,17 @@
 import { prisma } from "@/lib/prisma";
+import { visibleSystemWhere, type Visibility } from "@/lib/access";
 import type { SessionUser } from "@/lib/session";
 import type { SystemDTO } from "@/lib/types";
 
 /**
- * Loads the dashboard's system list for one user, with `isFavorite` reflecting that user's own
- * favorites. Shared by the dashboard page (initial render) and GET /api/systems (refresh).
+ * Loads the dashboard's system list for one user: only systems in categories the user may see
+ * (see lib/access.ts), with `isFavorite` reflecting that user's own favorites. Shared by the
+ * dashboard page (initial render) and GET /api/systems (refresh).
  */
-export async function loadSystemsFor(user: SessionUser): Promise<SystemDTO[]> {
+export async function loadSystemsFor(user: SessionUser, visibility: Visibility): Promise<SystemDTO[]> {
   const [systems, favorites] = await Promise.all([
     prisma.system.findMany({
+      where: visibleSystemWhere(visibility),
       include: { category: true, tags: { include: { tag: true } } },
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
     }),
