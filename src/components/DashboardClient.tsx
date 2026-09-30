@@ -71,8 +71,11 @@ export function DashboardClient({
   }
 
   async function toggleFavorite(id: string) {
-    setSystems((prev) => prev.map((s) => (s.id === id ? { ...s, isFavorite: !s.isFavorite } : s)));
-    await fetch(`/api/systems/${id}/favorite`, { method: "PATCH" });
+    const flip = () =>
+      setSystems((prev) => prev.map((s) => (s.id === id ? { ...s, isFavorite: !s.isFavorite } : s)));
+    flip();
+    const res = await fetch(`/api/systems/${id}/favorite`, { method: "PATCH" }).catch(() => null);
+    if (!res?.ok) flip(); // roll back the optimistic toggle
   }
 
   async function handleReorder(categoryId: string, orderedIds: string[]) {

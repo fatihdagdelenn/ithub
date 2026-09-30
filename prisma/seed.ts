@@ -303,10 +303,17 @@ async function main() {
           host: s.host || null,
           url: s.url,
           description: s.description,
-          isFavorite: s.isFavorite ?? false,
           categoryId,
         },
       });
+
+      // Favorites are per user - star the example favorites for every seeded user.
+      if (s.isFavorite) {
+        const users = await prisma.user.findMany({ select: { id: true } });
+        await prisma.userFavorite.createMany({
+          data: users.map((u) => ({ userId: u.id, systemId: system.id })),
+        });
+      }
 
       for (const tagName of s.tags) {
         const tag = await prisma.tag.upsert({

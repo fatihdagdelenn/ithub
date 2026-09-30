@@ -15,6 +15,8 @@ model User {
   role         String   @default("USER")
   createdAt    DateTime @default(now())
 
+  favorites UserFavorite[]
+
   @@map("users")
 }
 
@@ -41,13 +43,12 @@ model Tag {
 }
 
 model System {
-  id          String   @id @default(cuid())
-  name        String
-  type        String
-  host        String?
-  url         String
-  description String?
-  isFavorite    Boolean   @default(false)
+  id            String    @id @default(cuid())
+  name          String
+  type          String
+  host          String?
+  url           String
+  description   String?
   isOnline      Boolean?
   lastCheckedAt DateTime?
   sortOrder     Int       @default(0)
@@ -57,7 +58,8 @@ model System {
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Restrict)
 
-  tags SystemTag[]
+  tags        SystemTag[]
+  favoritedBy UserFavorite[]
 
   @@map("systems")
 }
@@ -71,4 +73,17 @@ model SystemTag {
 
   @@id([systemId, tagId])
   @@map("system_tags")
+}
+
+// Per-user favorites: each user stars systems for themselves only.
+model UserFavorite {
+  userId    String
+  systemId  String
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  system System @relation(fields: [systemId], references: [id], onDelete: Cascade)
+
+  @@id([userId, systemId])
+  @@map("user_favorites")
 }

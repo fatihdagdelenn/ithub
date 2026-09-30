@@ -127,7 +127,8 @@ export function SystemFormModal({
             onChange={(e) => setIsFavorite(e.target.checked)}
             className="h-4 w-4 rounded border-slate-300"
           />
-          Favorilere ekle
+          Favorilerime ekle
+          <span className="text-xs text-slate-400">(favoriler kişiseldir, sadece sizin panelinizi etkiler)</span>
         </label>
 
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}

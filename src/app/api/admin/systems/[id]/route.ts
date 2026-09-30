@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { systemSchema } from "@/lib/validation";
 import { resolveTagIds } from "@/lib/tags";
 import { guardApi } from "@/lib/session";
+import { setFavorite } from "@/lib/systems";
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   const auth = await guardApi("ADMIN");
@@ -14,7 +15,7 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Geçersiz veri" }, { status: 400 });
   }
 
-  const { tags, host, description, ...data } = parsed.data;
+  const { tags, host, description, isFavorite, ...data } = parsed.data;
   const tagIds = await resolveTagIds(tags);
 
   const system = await prisma.system.update({
@@ -29,6 +30,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
       },
     },
   });
+  // The form's favorite checkbox reflects (and changes) the editing admin's own favorites only.
+  await setFavorite(auth.id, system.id, isFavorite);
 
   return NextResponse.json({ system });
 }

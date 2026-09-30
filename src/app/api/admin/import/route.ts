@@ -4,6 +4,7 @@ import { importSchema } from "@/lib/validation";
 import { resolveTagIds } from "@/lib/tags";
 import { slugify } from "@/lib/slug";
 import { guardApi } from "@/lib/session";
+import { setFavorite } from "@/lib/systems";
 
 async function nextSortOrder(categoryId: string, cache: Map<string, number>): Promise<number> {
   const cached = cache.get(categoryId);
@@ -72,10 +73,12 @@ export async function POST(request: NextRequest) {
         host: item.host || null,
         url: item.url,
         description: item.description || null,
-        isFavorite: item.isFavorite,
       };
 
+      let systemId: string;
+
       if (existing) {
+        systemId = existing.id;
         await prisma.system.update({
           where: { id: existing.id },
           data: { ...data, tags: { deleteMany: {}, create: tagIds.map((tagId) => ({ tagId })) } },
@@ -83,11 +86,15 @@ export async function POST(request: NextRequest) {
         updated++;
       } else {
         const sortOrder = await nextSortOrder(categoryId, sortOrderCache);
-        await prisma.system.create({
+        const system = await prisma.system.create({
           data: { ...data, sortOrder, tags: { create: tagIds.map((tagId) => ({ tagId })) } },
         });
+        systemId = system.id;
         created++;
       }
+      // Favorites are per user: an imported `isFavorite: true` stars the system for the importing
+      // admin. Import is additive, so `false` never removes an existing favorite.
+      if (item.isFavorite) await setFavorite(auth.id, systemId, true);
     } catch (err) {
       errors.push({ name: item.name, error: err instanceof Error ? err.message : "Bilinmeyen hata" });
     }
