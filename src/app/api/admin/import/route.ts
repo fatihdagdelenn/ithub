@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { importSchema } from "@/lib/validation";
 import { resolveTagIds } from "@/lib/tags";
 import { slugify } from "@/lib/slug";
+import { guardApi } from "@/lib/session";
 
 async function nextSortOrder(categoryId: string, cache: Map<string, number>): Promise<number> {
   const cached = cache.get(categoryId);
@@ -41,6 +42,9 @@ async function resolveCategoryId(name: string, cache: Map<string, string>): Prom
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const categoryCache = new Map<string, string>();
   const sortOrderCache = new Map<string, number>();
 

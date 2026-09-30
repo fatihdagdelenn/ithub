@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { systemSchema } from "@/lib/validation";
 import { resolveTagIds } from "@/lib/tags";
+import { guardApi } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const body = await request.json().catch(() => null);
   const parsed = systemSchema.safeParse(body);
   if (!parsed.success) {

@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/session";
+import { guardApi } from "@/lib/session";
 
 export async function PATCH(_request: Request, { params }: { params: { id: string } }) {
-  await requireUser();
+  const user = await guardApi();
+  if (user instanceof NextResponse) return user;
 
   const existing = await prisma.system.findUnique({ where: { id: params.id } });
   if (!existing) {

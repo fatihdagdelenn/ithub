@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getIronSession } from "iron-session";
-import { sessionOptions, type AppSession } from "@/lib/session";
+import { sessionOptions, type AppSession } from "@/lib/sessionConfig";
 
 const PUBLIC_PATHS = ["/login", "/api/auth/login"];
 
@@ -23,13 +23,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (pathname.startsWith("/admin") && session.user.role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  if (pathname.startsWith("/api/admin") && session.user.role !== "ADMIN") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  // Role checks deliberately do NOT happen here: the cookie's copy of the role can be stale (the
+  // user may have been demoted, promoted or deleted since logging in). Admin pages re-check via
+  // src/app/admin/layout.tsx and every API handler via guardApi(), both against the database.
 
   return response;
 }

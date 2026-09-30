@@ -3,8 +3,12 @@ import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { userSchema } from "@/lib/validation";
+import { guardApi } from "@/lib/session";
 
 export async function GET() {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "asc" },
     select: { id: true, username: true, name: true, role: true, createdAt: true },
@@ -13,6 +17,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const body = await request.json().catch(() => null);
   const parsed = userSchema.safeParse(body);
   if (!parsed.success) {

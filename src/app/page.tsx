@@ -1,3 +1,4 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { DashboardClient } from "@/components/DashboardClient";
@@ -7,7 +8,8 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  // Account deleted while the session cookie was still valid: send them back to the login page.
+  if (!user) redirect("/login");
 
   const [systems, categories, tags] = await Promise.all([
     prisma.system.findMany({

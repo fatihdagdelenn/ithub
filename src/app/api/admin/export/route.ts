@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { guardApi } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const systems = await prisma.system.findMany({
     include: { category: true, tags: { include: { tag: true } } },
     orderBy: { name: "asc" },

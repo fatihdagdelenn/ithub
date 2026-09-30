@@ -3,8 +3,12 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { categorySchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
+import { guardApi } from "@/lib/session";
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const body = await request.json().catch(() => null);
   const parsed = categorySchema.safeParse(body);
   if (!parsed.success) {
@@ -30,6 +34,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const systemCount = await prisma.system.count({ where: { categoryId: params.id } });
   if (systemCount > 0) {
     return NextResponse.json(

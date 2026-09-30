@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { categorySchema } from "@/lib/validation";
 import { slugify } from "@/lib/slug";
+import { guardApi } from "@/lib/session";
 
 export async function POST(request: NextRequest) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const body = await request.json().catch(() => null);
   const parsed = categorySchema.safeParse(body);
   if (!parsed.success) {

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { guardApi } from "@/lib/session";
 
 const reorderSchema = z.object({ systemIds: z.array(z.string().min(1)).min(1) });
 
 export async function POST(request: NextRequest) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const body = await request.json().catch(() => null);
   const parsed = reorderSchema.safeParse(body);
   if (!parsed.success) {

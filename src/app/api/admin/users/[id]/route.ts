@@ -3,9 +3,12 @@ import bcrypt from "bcryptjs";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { userSchema } from "@/lib/validation";
-import { requireUser } from "@/lib/session";
+import { guardApi } from "@/lib/session";
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const body = await request.json().catch(() => null);
   const parsed = userSchema.safeParse(body);
   if (!parsed.success) {
@@ -43,8 +46,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
-  const current = await requireUser();
-  if (current.id === params.id) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+  if (auth.id === params.id) {
     return NextResponse.json({ error: "Kendi hesabınızı silemezsiniz" }, { status: 400 });
   }
 
