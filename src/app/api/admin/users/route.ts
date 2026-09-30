@@ -4,6 +4,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { userSchema } from "@/lib/validation";
 import { guardApi } from "@/lib/session";
+import { existingGroupIds } from "@/lib/groups";
+import { toUserDTO, userSelect } from "@/lib/users";
 
 export async function GET() {
   const auth = await guardApi("ADMIN");
@@ -11,9 +13,9 @@ export async function GET() {
 
   const users = await prisma.user.findMany({
     orderBy: { createdAt: "asc" },
-    select: { id: true, username: true, name: true, role: true, createdAt: true },
+    select: userSelect,
   });
-  return NextResponse.json({ users });
+  return NextResponse.json({ users: users.map(toUserDTO) });
 }
 
 export async function POST(request: NextRequest) {
@@ -31,16 +33,18 @@ export async function POST(request: NextRequest) {
 
   try {
     const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+    const groupIds = await existingGroupIds(parsed.data.groupIds ?? []);
     const user = await prisma.user.create({
       data: {
         username: parsed.data.username,
         name: parsed.data.name,
         role: parsed.data.role,
         passwordHash,
+        groups: { create: groupIds.map((groupId) => ({ groupId })) },
       },
-      select: { id: true, username: true, name: true, role: true, createdAt: true },
+      select: userSelect,
     });
-    return NextResponse.json({ user }, { status: 201 });
+    return NextResponse.json({ user: toUserDTO(user) }, { status: 201 });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       return NextResponse.json({ error: "Bu kullanıcı adı zaten kullanılıyor" }, { status: 409 });

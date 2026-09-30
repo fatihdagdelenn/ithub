@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { DashboardClient } from "@/components/DashboardClient";
 import { loadSystemsFor } from "@/lib/systems";
-import { getVisibility, visibleCategoryWhere, visibleTagWhere } from "@/lib/access";
+import { getVisibility, hasNoAccess, visibleCategoryWhere, visibleTagWhere } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +29,7 @@ export default async function DashboardPage() {
       initialSystems={initialSystems}
       categories={categories}
       initialTags={tags.map((t) => t.name)}
+      noAccess={hasNoAccess(visibility)}
     />
   );
 }

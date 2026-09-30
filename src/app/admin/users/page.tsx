@@ -1,25 +1,41 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Pencil, Trash2, Plus, ShieldCheck, User as UserIcon } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Pencil, Trash2, Plus, ShieldCheck, User as UserIcon, AlertTriangle } from "lucide-react";
 import { AdminHeader } from "@/components/AdminHeader";
 import { Modal } from "@/components/Modal";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
-import type { Role, UserDTO } from "@/lib/types";
+import type { GroupDTO, Role, UserDTO } from "@/lib/types";
+
+type UserFormValues = { username: string; name: string; password: string; role: Role; groupIds: string[] };
+
+/** What the user can actually see, derived from their groups (mirrors lib/access.ts). */
+function accessSummary(role: Role, groupIds: string[], groups: GroupDTO[]) {
+  if (role === "ADMIN") return { kind: "all" as const, label: "Her şeyi görür (Admin)" };
+  const mine = groups.filter((g) => groupIds.includes(g.id));
+  if (mine.some((g) => g.allCategories)) return { kind: "all" as const, label: "Tüm kategoriler" };
+  const count = new Set(mine.flatMap((g) => g.categoryIds)).size;
+  if (count === 0) return { kind: "none" as const, label: "Erişimi yok, hiçbir sistem göremez" };
+  return { kind: "some" as const, label: `${count} kategori` };
+}
 
 function UserForm({
   initial,
+  groups,
   onClose,
   onSubmit,
 }: {
   initial?: UserDTO;
+  groups: GroupDTO[];
   onClose: () => void;
-  onSubmit: (values: { username: string; name: string; password: string; role: Role }) => Promise<string | void>;
+  onSubmit: (values: UserFormValues) => Promise<string | void>;
 }) {
   const [username, setUsername] = useState(initial?.username ?? "");
   const [name, setName] = useState(initial?.name ?? "");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<Role>(initial?.role ?? "USER");
+  const [groupIds, setGroupIds] = useState<string[]>(initial?.groupIds ?? []);
+  const access = accessSummary(role, groupIds, groups);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -31,7 +47,7 @@ function UserForm({
           e.preventDefault();
           setSaving(true);
           setError(null);
-          const err = await onSubmit({ username, name, password, role });
+          const err = await onSubmit({ username, name, password, role, groupIds });
           setSaving(false);
           if (err) setError(err);
         }}
@@ -67,6 +83,42 @@ function UserForm({
             </option>
           </select>
         </div>
+        <div>
+          <label className="label">Gruplar</label>
+          {groups.length === 0 ? (
+            <p className="text-xs text-slate-400">Henüz grup yok. Gruplar sayfasından oluşturabilirsiniz.</p>
+          ) : (
+            <div className="max-h-44 space-y-0.5 overflow-y-auto rounded-lg border border-slate-200 p-2 dark:border-white/10">
+              {groups.map((g) => (
+                <label
+                  key={g.id}
+                  className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-slate-900/[0.03] dark:hover:bg-white/[0.04]"
+                >
+                  <input
+                    type="checkbox"
+                    checked={groupIds.includes(g.id)}
+                    onChange={() =>
+                      setGroupIds((prev) => (prev.includes(g.id) ? prev.filter((id) => id !== g.id) : [...prev, g.id]))
+                    }
+                    className="h-4 w-4 rounded border-slate-300"
+                  />
+                  <span className="flex-1 truncate">{g.name}</span>
+                  <span className="text-xs text-slate-400">
+                    {g.allCategories ? "Tüm kategoriler" : `${g.categoryIds.length} kategori`}
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+          <p
+            className={`mt-1.5 flex items-center gap-1.5 text-xs ${
+              access.kind === "none" ? "text-amber-600 dark:text-amber-400" : "text-slate-500 dark:text-slate-400"
+            }`}
+          >
+            {access.kind === "none" && <AlertTriangle size={13} />}
+            Erişim: {access.label}
+          </p>
+        </div>
         {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" className="btn-secondary" onClick={onClose}>
@@ -83,6 +135,8 @@ function UserForm({
 
 export default function UsersAdminPage() {
   const [users, setUsers] = useState<UserDTO[]>([]);
+  const [groups, setGroups] = useState<GroupDTO[]>([]);
+  const groupById = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups]);
   const [loading, setLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editing, setEditing] = useState<UserDTO | null>(null);
@@ -91,9 +145,12 @@ export default function UsersAdminPage() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch("/api/admin/users");
-    const data = await res.json();
-    setUsers(data.users ?? []);
+    const [usersRes, groupsRes] = await Promise.all([
+      fetch("/api/admin/users").then((r) => r.json()),
+      fetch("/api/admin/groups").then((r) => r.json()),
+    ]);
+    setUsers(usersRes.users ?? []);
+    setGroups(groupsRes.groups ?? []);
     setLoading(false);
   }
 
@@ -101,7 +158,7 @@ export default function UsersAdminPage() {
     load();
   }, []);
 
-  async function handleAdd(values: { username: string; name: string; password: string; role: Role }) {
+  async function handleAdd(values: UserFormValues) {
     const res = await fetch("/api/admin/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -115,7 +172,7 @@ export default function UsersAdminPage() {
     await load();
   }
 
-  async function handleEdit(values: { username: string; name: string; password: string; role: Role }) {
+  async function handleEdit(values: UserFormValues) {
     if (!editing) return;
     const res = await fetch(`/api/admin/users/${editing.id}`, {
       method: "PUT",
@@ -158,38 +215,66 @@ export default function UsersAdminPage() {
           <p className="text-sm text-slate-400">Yükleniyor...</p>
         ) : (
           <div className="card divide-y divide-slate-100 dark:divide-slate-800">
-            {users.map((u) => (
-              <div key={u.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-500">
-                  {u.role === "ADMIN" ? <ShieldCheck size={17} /> : <UserIcon size={17} />}
+            {users.map((u) => {
+              const access = accessSummary(u.role, u.groupIds, groups);
+              return (
+                <div key={u.id} className="flex items-center gap-3 px-4 py-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-500">
+                    {u.role === "ADMIN" ? <ShieldCheck size={17} /> : <UserIcon size={17} />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium">{u.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      {u.username} · {u.role === "ADMIN" ? "Admin" : "Kullanıcı"}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-1">
+                      {u.groupIds
+                        .map((id) => groupById.get(id))
+                        .filter((g): g is GroupDTO => !!g)
+                        .map((g) => (
+                          <span
+                            key={g.id}
+                            className="rounded-full bg-slate-900/[0.05] px-2 py-0.5 text-[11px] text-slate-600 dark:bg-white/[0.06] dark:text-slate-300"
+                          >
+                            {g.name}
+                          </span>
+                        ))}
+                      {u.role !== "ADMIN" && (
+                        <span
+                          className={`text-[11px] ${
+                            access.kind === "none"
+                              ? "inline-flex items-center gap-1 font-medium text-amber-600 dark:text-amber-400"
+                              : "text-slate-400"
+                          }`}
+                        >
+                          {access.kind === "none" && <AlertTriangle size={11} />}
+                          {access.label}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button type="button" className="btn-secondary px-2.5" onClick={() => setEditing(u)}>
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-danger px-2.5"
+                    onClick={() => {
+                      setDeleteError(null);
+                      setDeleting(u);
+                    }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">{u.name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {u.username} · {u.role === "ADMIN" ? "Admin" : "Kullanıcı"}
-                  </p>
-                </div>
-                <button type="button" className="btn-secondary px-2.5" onClick={() => setEditing(u)}>
-                  <Pencil size={14} />
-                </button>
-                <button
-                  type="button"
-                  className="btn-danger px-2.5"
-                  onClick={() => {
-                    setDeleteError(null);
-                    setDeleting(u);
-                  }}
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </main>
 
-      {showAdd && <UserForm onClose={() => setShowAdd(false)} onSubmit={handleAdd} />}
-      {editing && <UserForm initial={editing} onClose={() => setEditing(null)} onSubmit={handleEdit} />}
+      {showAdd && <UserForm groups={groups} onClose={() => setShowAdd(false)} onSubmit={handleAdd} />}
+      {editing && <UserForm initial={editing} groups={groups} onClose={() => setEditing(null)} onSubmit={handleEdit} />}
       {deleting && (
         <ConfirmDialog
           title="Kullanıcıyı sil"

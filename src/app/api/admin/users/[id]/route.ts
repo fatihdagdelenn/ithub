@@ -4,6 +4,8 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { userSchema } from "@/lib/validation";
 import { guardApi } from "@/lib/session";
+import { existingGroupIds } from "@/lib/groups";
+import { toUserDTO, userSelect } from "@/lib/users";
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
   const auth = await guardApi("ADMIN");
@@ -25,6 +27,8 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
     }
   }
 
+  const groupIds = parsed.data.groupIds === undefined ? undefined : await existingGroupIds(parsed.data.groupIds);
+
   try {
     const user = await prisma.user.update({
       where: { id: params.id },
@@ -33,10 +37,13 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
         name: parsed.data.name,
         role: parsed.data.role,
         ...(parsed.data.password ? { passwordHash: await bcrypt.hash(parsed.data.password, 10) } : {}),
+        ...(groupIds !== undefined
+          ? { groups: { deleteMany: {}, create: groupIds.map((groupId) => ({ groupId })) } }
+          : {}),
       },
-      select: { id: true, username: true, name: true, role: true, createdAt: true },
+      select: userSelect,
     });
-    return NextResponse.json({ user });
+    return NextResponse.json({ user: toUserDTO(user) });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
       return NextResponse.json({ error: "Bu kullanıcı adı zaten kullanılıyor" }, { status: 409 });

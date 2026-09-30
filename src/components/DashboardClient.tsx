@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Star, SearchX, Search, Plus, Download, Upload, ListChecks, X } from "lucide-react";
+import { Star, SearchX, Search, Plus, Download, Upload, ListChecks, X, Lock } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { SystemCard } from "@/components/SystemCard";
 import { SortableSystemGrid } from "@/components/SortableSystemGrid";
@@ -38,11 +38,14 @@ export function DashboardClient({
   initialSystems,
   categories,
   initialTags,
+  noAccess = false,
 }: {
   user: SessionUser;
   initialSystems: SystemDTO[];
   categories: CategoryDTO[];
   initialTags: string[];
+  /** True when no group grants this user any category (see lib/access.ts). */
+  noAccess?: boolean;
 }) {
   const isAdmin = user.role === "ADMIN";
   const [systems, setSystems] = useState(initialSystems);
@@ -390,7 +393,15 @@ export function DashboardClient({
           </div>
         )}
 
-        {categoryFilter === "all" ? (
+        {noAccess ? (
+          <div className="flex flex-col items-center gap-2 py-24 text-center text-slate-400 dark:text-slate-500">
+            <Lock size={28} />
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Size henüz erişim tanımlanmadı</p>
+            <p className="max-w-sm text-sm">
+              Görmeniz gereken sistemler için yöneticinizden sizi ilgili gruba eklemesini isteyin.
+            </p>
+          </div>
+        ) : categoryFilter === "all" ? (
           groupedByCategory.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-24 text-slate-400 dark:text-slate-600">
               <SearchX size={28} />

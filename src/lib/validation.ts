@@ -39,4 +39,14 @@ export const userSchema = z.object({
   name: z.string().min(1, "Ad Soyad gerekli").max(120),
   password: z.string().min(6, "En az 6 karakter").optional().or(z.literal("")),
   role: z.enum(["ADMIN", "USER"]),
+  // Omitted = leave the user's group memberships untouched.
+  groupIds: z.array(z.string().min(1)).max(500).optional(),
+});
+
+export const groupSchema = z.object({
+  name: z.string().trim().min(1, "Grup adı gerekli").max(60),
+  description: z.string().trim().max(300).optional().or(z.literal("")),
+  allCategories: z.boolean().default(false),
+  categoryIds: z.array(z.string().min(1)).max(1000).default([]),
+  memberIds: z.array(z.string().min(1)).max(10000).default([]),
 });

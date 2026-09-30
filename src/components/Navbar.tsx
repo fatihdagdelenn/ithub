@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 import Link from "next/link";
-import { LogOut, LayoutGrid, Tag as TagIcon, Users, ServerCog, ChevronDown } from "lucide-react";
+import { LogOut, LayoutGrid, Tag as TagIcon, Users, UsersRound, ServerCog, ChevronDown } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useClickOutside } from "@/lib/useClickOutside";
 import { APP_VERSION } from "@/lib/version";
@@ -72,6 +72,13 @@ export function Navbar({ user }: { user: SessionUser }) {
                       onClick={() => setMenuOpen(false)}
                     >
                       <Users size={14} /> Kullanıcı Yönetimi
+                    </Link>
+                    <Link
+                      href="/admin/groups"
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 dark:text-slate-300 dark:hover:bg-white/5"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <UsersRound size={14} /> Grup ve Erişim Yönetimi
                     </Link>
                   </>
                 )}
