@@ -12,7 +12,12 @@ import { TAG_PILL_BASE, tagTone } from "@/lib/tagStyle";
 import type { SessionUser } from "@/lib/session";
 import type { CategoryDTO, SystemDTO } from "@/lib/types";
 
-type ImportResult = { created: number; updated: number; errors: { name: string; error: string }[] };
+type ImportResult = {
+  created: number;
+  updated: number;
+  groups?: { created: number; updated: number };
+  errors: { name: string; error: string }[];
+};
 
 async function fetchSystems(): Promise<SystemDTO[]> {
   const res = await fetch("/api/systems");
@@ -169,7 +174,7 @@ export function DashboardClient({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `ithub-systems-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `ithub-export-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -349,6 +354,12 @@ export function DashboardClient({
               <p className="text-sm text-slate-700 dark:text-slate-300">
                 İçe aktarma tamamlandı: <span className="font-semibold text-brand-600 dark:text-brand-400">{importResult.created}</span>{" "}
                 yeni, <span className="font-semibold text-brand-600 dark:text-brand-400">{importResult.updated}</span> güncellendi
+                {importResult.groups && importResult.groups.created + importResult.groups.updated > 0 && (
+                  <>
+                    {" "}
+                    · grup: {importResult.groups.created} yeni, {importResult.groups.updated} güncellendi
+                  </>
+                )}
                 {importResult.errors.length > 0 && (
                   <span className="text-red-600 dark:text-red-400"> · {importResult.errors.length} hata</span>
                 )}

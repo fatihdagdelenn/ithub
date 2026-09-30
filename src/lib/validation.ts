@@ -30,6 +30,25 @@ export const importItemSchema = z.object({
 
 export const importSchema = z.array(importItemSchema).min(1, "En az bir sistem gerekli").max(1000);
 
+export const importGroupSchema = z.object({
+  name: z.string().trim().min(1, "Grup adı gerekli").max(60),
+  description: z.string().trim().max(300).nullable().optional(),
+  allCategories: z.boolean().default(false),
+  categories: z.array(z.string().min(1).max(60)).max(1000).default([]), // category names
+  members: z.array(z.string().min(1).max(60)).max(10000).default([]), // usernames
+});
+
+// Accepts both export formats: v1 (a plain array of systems) and v2 ({ systems, groups }).
+export const importFileSchema = z.union([
+  importSchema.transform((systems) => ({ systems, groups: [] as z.infer<typeof importGroupSchema>[] })),
+  z
+    .object({
+      systems: z.array(importItemSchema).max(1000).default([]),
+      groups: z.array(importGroupSchema).max(500).default([]),
+    })
+    .refine((d) => d.systems.length > 0 || d.groups.length > 0, "Dosyada sistem veya grup yok"),
+]);
+
 export const tagSchema = z.object({
   name: z.string().trim().min(1, "Etiket adı gerekli").max(40),
 });
