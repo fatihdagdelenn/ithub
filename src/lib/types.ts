@@ -35,4 +35,15 @@ export type UserDTO = {
   name: string;
   role: Role;
   createdAt: string;
+  groupIds: string[];
+};
+
+export type GroupDTO = {
+  id: string;
+  name: string;
+  description: string | null;
+  allCategories: boolean;
+  categoryIds: string[];
+  memberIds: string[];
+  createdAt: string;
 };

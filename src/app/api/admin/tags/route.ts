@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { tagSchema } from "@/lib/validation";
+import { guardApi } from "@/lib/session";
 
 export async function GET() {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const tags = await prisma.tag.findMany({
     orderBy: { name: "asc" },
     include: { _count: { select: { systems: true } } },
@@ -12,6 +16,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const body = await request.json().catch(() => null);
   const parsed = tagSchema.safeParse(body);
   if (!parsed.success) {

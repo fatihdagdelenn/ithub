@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowLeft, LayoutGrid, Tag, Users } from "lucide-react";
+import { ArrowLeft, LayoutGrid, Tag, Users, UsersRound } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -33,6 +33,12 @@ export function AdminHeader({ title }: { title: string }) {
             className={`btn-ghost px-3 ${pathname === "/admin/users" ? "bg-slate-100 dark:bg-slate-800" : ""}`}
           >
             <Users size={15} /> Kullanıcılar
+          </Link>
+          <Link
+            href="/admin/groups"
+            className={`btn-ghost px-3 ${pathname === "/admin/groups" ? "bg-slate-100 dark:bg-slate-800" : ""}`}
+          >
+            <UsersRound size={15} /> Gruplar
           </Link>
         </nav>
         <ThemeToggle />

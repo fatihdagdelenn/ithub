@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { tagSchema } from "@/lib/validation";
+import { guardApi } from "@/lib/session";
 
 export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   const body = await request.json().catch(() => null);
   const parsed = tagSchema.safeParse(body);
   if (!parsed.success) {
@@ -25,6 +29,9 @@ export async function PUT(request: NextRequest, { params }: { params: { id: stri
 }
 
 export async function DELETE(_request: NextRequest, { params }: { params: { id: string } }) {
+  const auth = await guardApi("ADMIN");
+  if (auth instanceof NextResponse) return auth;
+
   await prisma.tag.delete({ where: { id: params.id } });
   return NextResponse.json({ ok: true });
 }

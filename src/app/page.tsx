@@ -1,39 +1,27 @@
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { DashboardClient } from "@/components/DashboardClient";
-import type { SystemDTO } from "@/lib/types";
+import { loadSystemsFor } from "@/lib/systems";
+import { getVisibility, hasNoAccess, visibleCategoryWhere, visibleTagWhere } from "@/lib/access";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
-  if (!user) return null;
+  // Account deleted while the session cookie was still valid: send them back to the login page.
+  if (!user) redirect("/login");
 
-  const [systems, categories, tags] = await Promise.all([
-    prisma.system.findMany({
-      include: { category: true, tags: { include: { tag: true } } },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    }),
+  const visibility = await getVisibility(user);
+  const [initialSystems, categories, tags] = await Promise.all([
+    loadSystemsFor(user, visibility),
     prisma.category.findMany({
+      where: visibleCategoryWhere(visibility),
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: { _count: { select: { systems: true } } },
     }),
-    prisma.tag.findMany({ orderBy: { name: "asc" } }),
+    prisma.tag.findMany({ where: visibleTagWhere(visibility), orderBy: { name: "asc" } }),
   ]);
-
-  const initialSystems: SystemDTO[] = systems.map((s) => ({
-    id: s.id,
-    name: s.name,
-    type: s.type,
-    host: s.host,
-    url: s.url,
-    description: s.description,
-    isFavorite: s.isFavorite,
-    isOnline: s.isOnline,
-    lastCheckedAt: s.lastCheckedAt?.toISOString() ?? null,
-    category: { id: s.category.id, name: s.category.name, icon: s.category.icon },
-    tags: s.tags.map((t) => t.tag.name),
-  }));
 
   return (
     <DashboardClient
@@ -41,6 +29,7 @@ export default async function DashboardPage() {
       initialSystems={initialSystems}
       categories={categories}
       initialTags={tags.map((t) => t.name)}
+      noAccess={hasNoAccess(visibility)}
     />
   );
 }

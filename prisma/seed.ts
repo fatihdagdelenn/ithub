@@ -264,6 +264,11 @@ async function main() {
   const adminPassword = process.env.ADMIN_PASSWORD || "ChangeMe123!";
   const adminName = process.env.ADMIN_NAME || "Administrator";
 
+  // The seed runs on every container start. Only a brand-new database (no users yet) gets the demo
+  // account - otherwise a demo user the admin deliberately deleted would come back on the next
+  // restart with its well-known password.
+  const isFreshInstall = (await prisma.user.count()) === 0;
+
   const existingAdmin = await prisma.user.findUnique({ where: { username: adminUsername } });
   if (!existingAdmin) {
     await prisma.user.create({
@@ -278,13 +283,17 @@ async function main() {
   }
 
   const existingDemo = await prisma.user.findUnique({ where: { username: "demo" } });
-  if (!existingDemo) {
+  if (isFreshInstall && !existingDemo) {
+    // The "Herkes" group is created by the access-groups migration; putting the demo user in it
+    // lets a fresh install show the dashboard as a regular user sees it.
+    const everyone = await prisma.group.findUnique({ where: { name: "Herkes" } });
     await prisma.user.create({
       data: {
         username: "demo",
         name: "Demo Kullanıcı",
         role: "USER",
         passwordHash: await bcrypt.hash("Demo123!", 10),
+        ...(everyone ? { groups: { create: { groupId: everyone.id } } } : {}),
       },
     });
     console.log("Demo kullanıcı oluşturuldu: demo");
@@ -303,10 +312,17 @@ async function main() {
           host: s.host || null,
           url: s.url,
           description: s.description,
-          isFavorite: s.isFavorite ?? false,
           categoryId,
         },
       });
+
+      // Favorites are per user - star the example favorites for every seeded user.
+      if (s.isFavorite) {
+        const users = await prisma.user.findMany({ select: { id: true } });
+        await prisma.userFavorite.createMany({
+          data: users.map((u) => ({ userId: u.id, systemId: system.id })),
+        });
+      }
 
       for (const tagName of s.tags) {
         const tag = await prisma.tag.upsert({

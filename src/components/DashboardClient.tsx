@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Star, SearchX, Search, Plus, Download, Upload, ListChecks, X } from "lucide-react";
+import { Star, SearchX, Search, Plus, Download, Upload, ListChecks, X, Lock } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { SystemCard } from "@/components/SystemCard";
 import { SortableSystemGrid } from "@/components/SortableSystemGrid";
@@ -12,7 +12,12 @@ import { TAG_PILL_BASE, tagTone } from "@/lib/tagStyle";
 import type { SessionUser } from "@/lib/session";
 import type { CategoryDTO, SystemDTO } from "@/lib/types";
 
-type ImportResult = { created: number; updated: number; errors: { name: string; error: string }[] };
+type ImportResult = {
+  created: number;
+  updated: number;
+  groups?: { created: number; updated: number };
+  errors: { name: string; error: string }[];
+};
 
 async function fetchSystems(): Promise<SystemDTO[]> {
   const res = await fetch("/api/systems");
@@ -38,11 +43,14 @@ export function DashboardClient({
   initialSystems,
   categories,
   initialTags,
+  noAccess = false,
 }: {
   user: SessionUser;
   initialSystems: SystemDTO[];
   categories: CategoryDTO[];
   initialTags: string[];
+  /** True when no group grants this user any category (see lib/access.ts). */
+  noAccess?: boolean;
 }) {
   const isAdmin = user.role === "ADMIN";
   const [systems, setSystems] = useState(initialSystems);
@@ -71,8 +79,11 @@ export function DashboardClient({
   }
 
   async function toggleFavorite(id: string) {
-    setSystems((prev) => prev.map((s) => (s.id === id ? { ...s, isFavorite: !s.isFavorite } : s)));
-    await fetch(`/api/systems/${id}/favorite`, { method: "PATCH" });
+    const flip = () =>
+      setSystems((prev) => prev.map((s) => (s.id === id ? { ...s, isFavorite: !s.isFavorite } : s)));
+    flip();
+    const res = await fetch(`/api/systems/${id}/favorite`, { method: "PATCH" }).catch(() => null);
+    if (!res?.ok) flip(); // roll back the optimistic toggle
   }
 
   async function handleReorder(categoryId: string, orderedIds: string[]) {
@@ -163,7 +174,7 @@ export function DashboardClient({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `ithub-systems-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `ithub-export-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   }
@@ -343,6 +354,12 @@ export function DashboardClient({
               <p className="text-sm text-slate-700 dark:text-slate-300">
                 İçe aktarma tamamlandı: <span className="font-semibold text-brand-600 dark:text-brand-400">{importResult.created}</span>{" "}
                 yeni, <span className="font-semibold text-brand-600 dark:text-brand-400">{importResult.updated}</span> güncellendi
+                {importResult.groups && importResult.groups.created + importResult.groups.updated > 0 && (
+                  <>
+                    {" "}
+                    · grup: {importResult.groups.created} yeni, {importResult.groups.updated} güncellendi
+                  </>
+                )}
                 {importResult.errors.length > 0 && (
                   <span className="text-red-600 dark:text-red-400"> · {importResult.errors.length} hata</span>
                 )}
@@ -387,7 +404,15 @@ export function DashboardClient({
           </div>
         )}
 
-        {categoryFilter === "all" ? (
+        {noAccess ? (
+          <div className="flex flex-col items-center gap-2 py-24 text-center text-slate-400 dark:text-slate-500">
+            <Lock size={28} />
+            <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Size henüz erişim tanımlanmadı</p>
+            <p className="max-w-sm text-sm">
+              Görmeniz gereken sistemler için yöneticinizden sizi ilgili gruba eklemesini isteyin.
+            </p>
+          </div>
+        ) : categoryFilter === "all" ? (
           groupedByCategory.length === 0 ? (
             <div className="flex flex-col items-center gap-2 py-24 text-slate-400 dark:text-slate-600">
               <SearchX size={28} />
